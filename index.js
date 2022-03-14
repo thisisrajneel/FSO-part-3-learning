@@ -1,8 +1,10 @@
 const express = require('express')
 const { serialize } = require('v8')
 const app = express()
+const cors = require('cors')
 
 app.use(express.json())
+app.use(cors())
 
 const requestLogger = (req,res,next) => {
     console.log('Method: ',req.method);
@@ -13,14 +15,6 @@ const requestLogger = (req,res,next) => {
 }
 
 app.use(requestLogger)
-
-const unknownEndpoint = (req, res) => {
-    res.status(404).send({
-        error: 'unknown endpoint'
-    })
-}
-
-app.use(unknownEndpoint)
 
 let notes = [
     {
@@ -94,7 +88,7 @@ app.post('/api/notes', (req,res) => {
     res.json(note)
 })
 
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
     console.log(`server running on port ${PORT}`);
 })
