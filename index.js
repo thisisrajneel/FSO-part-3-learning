@@ -4,6 +4,7 @@ const app = express()
 const cors = require('cors')
 
 app.use(express.json())
+app.use(express.static('build'))
 app.use(cors())
 
 const requestLogger = (req,res,next) => {
