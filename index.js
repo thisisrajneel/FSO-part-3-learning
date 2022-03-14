@@ -1,6 +1,7 @@
 const express = require('express')
 const { serialize } = require('v8')
 const app = express()
+
 app.use(express.json())
 
 const requestLogger = (req,res,next) => {
