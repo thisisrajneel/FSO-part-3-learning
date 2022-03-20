@@ -2,6 +2,27 @@ const express = require('express')
 const { serialize } = require('v8')
 const app = express()
 const cors = require('cors')
+const mongoose = require('mongoose')
+
+const uri = 'mongodb+srv://rajneel:fso-learn@cluster0.i7ait.mongodb.net/noteApp?retryWrites=true&w=majority'
+
+mongoose.connect(uri)
+
+const noteSchema = new mongoose.Schema({
+    content: String,
+    date: Date,
+    important: Boolean,
+})
+
+noteSchema.set('toJSON', {
+    transform: (document, returnedObject) => {
+        returnedObject.id = returnedObject._id.toString()
+        delete returnedObject._id
+        delete returnedObject.__v
+    }
+})
+
+const Note = mongoose.model('Note',noteSchema)
 
 app.use(express.json())
 app.use(express.static('build'))
@@ -43,7 +64,9 @@ app.get('/', (req,res) => {
 })
 
 app.get('/api/notes', (req,res) => {
-    res.json(notes)
+    Note.find({}).then(notes => {
+        res.json(notes)
+    })
 })
 
 app.get('/api/notes/:id', (req,res) => {
