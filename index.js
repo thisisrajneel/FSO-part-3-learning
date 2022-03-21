@@ -1,9 +1,9 @@
 require('dotenv').config()
 const express = require('express')
-const { serialize } = require('v8')
 const app = express()
 const cors = require('cors')
 const Note = require('./models/note')
+const { response } = require('express')
 
 app.use(express.json())
 app.use(express.static('build'))
@@ -18,6 +18,18 @@ const requestLogger = (req,res,next) => {
 }
 
 app.use(requestLogger)
+
+const errorHandler = (error, req, res, next) => {
+    console.error(error.message);
+
+    if(error.name === 'CastError') {
+        res.status(400).send({ error: 'Malformatted ID' })
+    }
+
+    next(error)
+}
+
+app.use(errorHandler)
 
 let notes = [
     {
@@ -44,36 +56,34 @@ app.get('/', (req,res) => {
     res.send('<h1>Hello World</h1>')
 })
 
-app.get('/api/notes', (req,res) => {
+app.get('/api/notes', (req, res, next) => {
     Note.find({}).then(notes => {
         res.json(notes)
     })
+    .catch(error => next(error))
 })
 
-app.get('/api/notes/:id', (req,res) => {
-    const id = Number(req.params.id)
-    const note = notes.find(n => n.id === id)
-    if(note) {
-        res.json(note)
-    }
-    else {
-        res.status(404).end()
-    }
+app.get('/api/notes/:id', (req, res, next) => {
+    Note.findById(req.params.id).then(note => {
+        if(note) {
+            res.json(note)
+        }
+        else {
+            res.status(404).end()
+        }
+    }).catch(error => next(error))
 })
 
-app.delete('/api/notes/:id', (req,res) => {
-    const id = Number(req.params.id)
-    notes = notes.filter(note => note.id !== id)
+app.delete('/api/notes/:id', (req, res, next) => {
+    Note.findByIdAndRemove(req.params.id)
+        .then( result => {
+            res.status(204).end()
+        })
+        .catch(error => next(error))
 
-    res.status(204).end()
 })
 
-const generateId = () => {
-    const maxId = notes.length > 0 ? Math.max(...notes.map(note => note.id)) : 0
-    return maxId+1
-}
-
-app.post('/api/notes', (req,res) => {
+app.post('/api/notes', (req, res, next) => {
     const body = req.body
 
     if(!body.content) {
@@ -82,15 +92,31 @@ app.post('/api/notes', (req,res) => {
         })
     }
 
-    const note = {
+    const note = new Note({
         content: body.content,
         important: body.important || false,
         date: new Date(),
-        id: generateId()
-    }
+    })
     
-    notes = notes.concat(note)
-    res.json(note)
+    note.save().then(savedNote=> {
+        res.json(savedNote)
+    })
+    .catch(error => next(error))
+})
+
+app.put('/api/notes/:id', (req, res, next) => {
+    const body = req.body
+  
+    const note = {
+      content: body.content,
+      important: body.important,
+    }
+  
+    Note.findByIdAndUpdate(req.params.id, note, { new: true })
+      .then(updatedNote => {
+        res.json(updatedNote)
+      })
+      .catch(error => next(error))
 })
 
 const PORT = process.env.PORT
