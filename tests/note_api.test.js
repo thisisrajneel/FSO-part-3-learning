@@ -70,6 +70,41 @@ test('note without content is not added', async () => {
     expect(notesAtEnd).toHaveLength(helper.initialNotes.length)
 })
 
+test('a specific note can be viewed', async () => {
+    const notesAtStart = await helper.notesInDB()
+    const noteToView = notesAtStart[0]
+
+    const resultNote = await api
+                                .get(`/api/notes/${noteToView.id}`)
+                                .expect(200)
+                                .expect('Content-Type', /application\/json/)
+    
+    // resultNote is coming from api request, which serializes data into JSON in the route handler itself.
+    // noteToView is coming directly from DB, which does note convert the date from type Date to String, hence it needs to be processed.
+    const processedNoteToView = JSON.parse(JSON.stringify(noteToView))
+
+    expect(resultNote.body).toEqual(processedNoteToView)
+})
+
+test('a note can be deleted', async () => {
+    const notesAtStart = await helper.notesInDB()
+    const noteToDelete = notesAtStart[0]
+  
+    await api
+      .delete(`/api/notes/${noteToDelete.id}`)
+      .expect(204)
+  
+    const notesAtEnd = await helper.notesInDB()
+  
+    expect(notesAtEnd).toHaveLength(
+      helper.initialNotes.length - 1
+    )
+  
+    const contents = notesAtEnd.map(r => r.content)
+  
+    expect(contents).not.toContain(noteToDelete.content)
+})
+
 afterAll(() => {
     mongoose.connection.close()
 })
